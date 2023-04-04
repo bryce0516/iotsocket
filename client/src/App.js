@@ -3,8 +3,11 @@ import logo from "./logo.svg";
 import "./App.css";
 import io from "socket.io-client";
 import { Mitt } from "mitt";
-const socket = io("http://localhost:4000", {
+const socket = io("http://15.165.99.93:7712", {
   autoConnect: false,
+  // auth: {
+  //   offset: undefined,
+  // },
 });
 
 // const emitter = new Mitt();
@@ -14,6 +17,7 @@ function App() {
   const [isConnected, setIsConnected] = React.useState(socket.connected);
   const [fooEvents, setFooEvents] = React.useState([]);
   const [chatText, setChatText] = React.useState("");
+  const [receivedMessage, setReceivedMessage] = React.useState("");
   React.useEffect(() => {
     function onConnect() {
       setIsConnected(true);
@@ -26,16 +30,23 @@ function App() {
     function onFooEvent(value) {
       setFooEvents((previous) => [...previous, value]);
     }
+    socket.on("my-event", ({ id, data }) => {
+      // do something with the data, and then update the offset
+      socket.auth.offset = id;
+    });
+    socket.on("receive_message", (data) => {
+      console.log("this is event", data);
+      setReceivedMessage(data.send_message);
+    });
+    // socket.on("connect", onConnect);
+    // socket.on("disconnect", onDisconnect);
+    // socket.on("foo", onFooEvent);
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("foo", onFooEvent);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("foo", onFooEvent);
-    };
+    // return () => {
+    //   socket.off("connect", onConnect);
+    //   socket.off("disconnect", onDisconnect);
+    //   socket.off("foo", onFooEvent);
+    // };
     // socket.on(
     //   "new-operations",
     //   ({ editorId, ops }) => {
@@ -95,7 +106,8 @@ function App() {
   }
 
   function disconnect() {
-    socket.disconnect();
+    socket.emit("leave_room", "1");
+    // socket.disconnect();
     console.log("dis working");
   }
   const joinRoom = () => {
@@ -106,7 +118,9 @@ function App() {
       <div style={{ margin: 0, paddingBottom: "3rem" }}>
         <button onClick={connect}>Connect</button>
         <button onClick={disconnect}>Disconnect</button>
-        <ul id="messages"></ul>
+        <ul id="messages">
+          <p>{receivedMessage}</p>
+        </ul>
         <button onClick={joinRoom}> Join Room</button>
         <form
           ref={formRef}
@@ -132,8 +146,10 @@ function App() {
             id="input"
             autoComplete="off"
             style={{
-              borderWidth: 0,
+              borderWidth: 1,
               padding: 0,
+              // height: 100,
+              // width: 100,
               flexGrow: 1,
               borderRadius: "2rem",
               margin: "0.25rem",
